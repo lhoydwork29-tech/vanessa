@@ -914,7 +914,7 @@
         };
 
         // Load from LocalStorage if available
-        function loadState() {
+        function loadLocalState() {
             try {
                 const saved = localStorage.getItem("esl_teacher_dashboard_state_v2");
                 if (saved) {
@@ -936,18 +936,53 @@
             appState.exchangeRates = normalized;
         }
 
+        const syncClientId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+
+        async function loadState() {
+            try {
+                const response = await fetch('/api/state');
+                if (!response.ok) throw new Error(`State request failed: ${response.status}`);
+                const { state } = await response.json();
+                if (state) {
+                    appState = { ...appState, ...state };
+                } else {
+                    loadLocalState();
+                    saveState();
+                }
+            } catch (e) {
+                console.error("Error loading shared state:", e);
+                loadLocalState();
+            }
+        }
+
         function saveState() {
             try {
                 ensureAllExchangeRates();
-                localStorage.setItem("esl_teacher_dashboard_state_v2", JSON.stringify(appState));
+                const state = JSON.stringify(appState);
+                localStorage.setItem("esl_teacher_dashboard_state_v2", state);
+                fetch('/api/state', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Client-Id': syncClientId },
+                    body: state
+                }).catch(e => console.error("Error saving shared state:", e));
             } catch (e) {
                 console.error("Error saving state to localStorage:", e);
             }
         }
 
+        const sharedStateEvents = new EventSource('/api/events');
+        sharedStateEvents.onmessage = function (event) {
+            const update = JSON.parse(event.data);
+            if (update.clientId === syncClientId) return;
+            appState = { ...appState, ...update.state };
+            ensureAllExchangeRates();
+            initThemeAndFont();
+            renderAll();
+        };
+
         // Initialize on window load
-        window.onload = function () {
-            loadState();
+        window.onload = async function () {
+            await loadState();
             ensureAllExchangeRates();
             snapshotLegacyPaidWeeks();
             initThemeAndFont();
