@@ -947,8 +947,12 @@
                 fetch('/api/state', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Client-Id': syncClientId },
-                    body: state
-                }).catch(e => console.error("Error saving shared state:", e));
+                    body: state,
+                    keepalive: new TextEncoder().encode(state).byteLength <= 60 * 1024
+                }).catch(e => {
+                    console.error("Error saving shared state:", e);
+                    showToast("Changes could not be saved. Keep this page open and try again.", "error");
+                });
             } catch (e) {
                 console.error("Error preparing shared state:", e);
             }

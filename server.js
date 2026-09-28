@@ -8,6 +8,7 @@ const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PORT || 3000);
 const eventClients = new Set();
 const maxBodyBytes = 5 * 1024 * 1024;
+let stateWriteQueue = Promise.resolve();
 
 function sendJson(response, status, value) {
     response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -59,7 +60,9 @@ async function handleRequest(request, response) {
                 sendJson(response, 400, { error: 'State must be a JSON object.' });
                 return;
             }
-            await writeState(state);
+            const write = stateWriteQueue.then(() => writeState(state));
+            stateWriteQueue = write.catch(() => {});
+            await write;
             const event = `data: ${JSON.stringify({ clientId: request.headers['x-client-id'] || null, state })}\n\n`;
             for (const client of eventClients) client.write(event);
             sendJson(response, 200, { ok: true });
