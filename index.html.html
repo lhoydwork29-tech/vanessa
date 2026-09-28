@@ -97,7 +97,7 @@
         <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col z-20 transition-all duration-300 shadow-sm">
             <div class="p-5 border-b border-slate-100 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div id="sidebar-avatar-wrap" class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-lg overflow-hidden shadow-inner">
+                    <div id="sidebar-avatar-wrap" class="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-2xl overflow-hidden shadow-inner">
                         <img id="sidebar-avatar-img" src="" alt="Profile" class="w-full h-full object-cover hidden">
                         <span id="sidebar-avatar-text">ET</span>
                     </div>
@@ -161,7 +161,7 @@
                     </span>
                 </div>
 
-                <div class="flex items-center space-x-4">
+                <div id="topbar-global-actions" class="flex items-center space-x-4" style="display: none;">
                     <!-- Quick global Week Selector for Dashboard & Schedule -->
                     <div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
                         <button onclick="changeGlobalWeek(-1)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-slate-600 hover:bg-slate-50 shadow-xs transition" title="Previous Week">
@@ -221,7 +221,7 @@
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Weekly Revenue (Selected Week)</p>
-                                <h3 id="kpi-weekly-revenue" class="text-3xl font-bold text-slate-900 mt-2">₱0.00</h3>
+                                <h3 id="kpi-weekly-revenue" class="text-3xl font-bold text-red-700 mt-2">₱0.00</h3>
                                 <p class="text-xs text-slate-500 font-medium mt-1">Based on marked attendance</p>
                             </div>
                             <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-inner">
@@ -351,7 +351,7 @@
                             <p class="text-xs text-slate-500">Grouped by student and weekly intervals with automatic PHP conversion.</p>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <span id="payments-total-sum-badge" class="px-4 py-2 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl border border-emerald-200 shadow-xs">
+                            <span id="payments-total-sum-badge" class="px-4 py-2 bg-red-50 text-red-700 font-bold text-sm rounded-xl border border-red-200 shadow-xs">
                                 Total: ₱0.00
                             </span>
                         </div>
@@ -431,7 +431,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
                             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Revenue</p>
-                            <h3 id="report-monthly-revenue" class="text-2xl font-bold text-slate-900 mt-2">₱0.00</h3>
+                            <h3 id="report-monthly-revenue" class="text-2xl font-bold text-red-700 mt-2">₱0.00</h3>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
                             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Attendance Rate</p>
@@ -475,8 +475,12 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Profile Picture</label>
                                 <div class="space-y-2">
-                                    <input type="file" id="settings-avatar-upload" accept="image/*" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-indigo-100 file:text-indigo-700 file:font-semibold file:cursor-pointer">
+                                    <input type="file" id="settings-avatar-upload" accept="image/*" class="block w-full text-sm text-slate-600 file:mr-3 file:py-3 file:px-4 file:rounded-xl file:border-0 file:bg-indigo-100 file:text-indigo-700 file:font-semibold file:cursor-pointer">
                                     <input type="text" id="settings-avatar-url-input" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Or paste image URL here">
+                                    <button type="button" onclick="removeAvatar()" class="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-lg transition">
+                                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                        <span>Remove photo</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -634,6 +638,14 @@
                         <input type="number" step="0.01" id="modal-student-rate50" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" value="200">
                     </div>
                 </div>
+                <fieldset>
+                    <legend class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Present class milestone alerts</legend>
+                    <div class="flex flex-wrap gap-4 text-sm text-slate-700">
+                        <label class="flex items-center gap-2"><input type="checkbox" id="student-milestone-15" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"> 15 classes</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" id="student-milestone-20" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"> 20 classes</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" id="student-milestone-30" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"> 30 classes</label>
+                    </div>
+                </fieldset>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Starting Date</label>
@@ -898,7 +910,7 @@
                 { id: "c5", studentId: "s2", date: "2026-09-24", time: "11:00", type: "Free Class", duration: 50, attendance: "Present", paidStatus: "Pending" },
                 { id: "c6", studentId: "s3", date: "2026-09-25", time: "15:00", type: "Regular", duration: 50, attendance: "Present", paidStatus: "Paid" }
             ],
-            paidWeeks: {} // key: studentId_weekStart -> true/false
+            paidWeeks: {} // key: studentId_weekStart -> { classAmounts: { classId: PHP amount } }
         };
 
         // Load from LocalStorage if available
@@ -937,6 +949,7 @@
         window.onload = function () {
             loadState();
             ensureAllExchangeRates();
+            snapshotLegacyPaidWeeks();
             initThemeAndFont();
             populateCountryDropdown();
             populateTimeDropdown();
@@ -969,8 +982,16 @@
             }, 3000);
         }
 
+        function parseLocalDate(dateValue) {
+            if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                const [year, month, day] = dateValue.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            }
+            return new Date(dateValue);
+        }
+
         function getMonday(d) {
-            d = new Date(d);
+            d = parseLocalDate(d);
             let day = d.getDay(),
                 diff = d.getDate() - day + (day == 0 ? -6: 1); // adjust when day is sunday
             return new Date(d.setDate(diff));
@@ -984,7 +1005,7 @@
         }
 
         function getWeekDays(mondayStr) {
-            let start = new Date(mondayStr);
+            let start = parseLocalDate(mondayStr);
             let days = [];
             for (let i = 0; i < 7; i++) {
                 let curr = new Date(start);
@@ -999,7 +1020,7 @@
         }
 
         function getWeekLabel(mondayStr) {
-            let start = new Date(mondayStr);
+            let start = parseLocalDate(mondayStr);
             let end = new Date(start);
             end.setDate(start.getDate() + 6);
             let opt1 = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -1008,7 +1029,7 @@
         }
 
         function changeGlobalWeek(direction) {
-            let d = new Date(appState.currentSelectedWeekStart);
+            let d = parseLocalDate(appState.currentSelectedWeekStart);
             d.setDate(d.getDate() + (direction * 7));
             appState.currentSelectedWeekStart = formatDateStr(d);
             saveState();
@@ -1023,7 +1044,7 @@
         }
 
         // Compute PHP amount for a class
-        function computeClassPHP(cls) {
+        function computeCurrentClassPHP(cls) {
             let student = appState.students.find(s => s.id === cls.studentId);
             if (!student) return 0;
             if (cls.type === 'Free Class' || cls.type === 'Trial Class' || cls.attendance === 'Cancelled') {
@@ -1033,6 +1054,42 @@
             let currency = student.currency || 'PHP';
             let exchangeRate = appState.exchangeRates[currency] || 1.0;
             return rate * exchangeRate;
+        }
+
+        function getClassPaymentKey(cls) {
+            return `${cls.studentId}_${formatDateStr(getMonday(cls.date))}`;
+        }
+
+        function snapshotLegacyPaidWeeks() {
+            Object.keys(appState.paidWeeks || {}).forEach(key => {
+                if (appState.paidWeeks[key] !== true) return;
+                const classAmounts = {};
+                appState.classes.forEach(cls => {
+                    if (getClassPaymentKey(cls) === key && (cls.attendance === 'Present' || cls.attendance === 'Absent')) {
+                        classAmounts[cls.id] = computeCurrentClassPHP(cls);
+                    }
+                });
+                appState.paidWeeks[key] = { classAmounts };
+            });
+            saveState();
+        }
+
+        function getLockedClassPHP(cls) {
+            const payment = appState.paidWeeks[getClassPaymentKey(cls)];
+            if (payment === true) return computeCurrentClassPHP(cls);
+            if (!payment || typeof payment !== 'object' || !payment.classAmounts) return null;
+            const amount = payment.classAmounts[cls.id];
+            return Number.isFinite(amount) ? amount : null;
+        }
+
+        function isClassPaid(cls) {
+            const payment = appState.paidWeeks[getClassPaymentKey(cls)];
+            return payment === true || getLockedClassPHP(cls) !== null;
+        }
+
+        function computeClassPHP(cls) {
+            const lockedAmount = getLockedClassPHP(cls);
+            return lockedAmount === null ? computeCurrentClassPHP(cls) : lockedAmount;
         }
 
         function updateLiveClock() {
@@ -1071,6 +1128,15 @@
                 showToast('Profile photo updated successfully!');
             };
             reader.readAsDataURL(file);
+        }
+
+        function removeAvatar() {
+            appState.avatarUrl = "";
+            document.getElementById('settings-avatar-upload').value = "";
+            document.getElementById('settings-avatar-url-input').value = "";
+            initThemeAndFont();
+            saveState();
+            showToast('Profile photo removed.');
         }
 
         function applyThemeStyles() {
@@ -1194,6 +1260,7 @@
             appState.exchangeRates[currency] = value;
             saveState();
             renderExchangeRateManager();
+            renderAll();
             showToast(`${currency} rate updated successfully!`);
         }
 
@@ -1220,6 +1287,9 @@
                 settings: "System Settings"
             };
             document.getElementById('topbar-title').innerText = titles[tabId] || "Dashboard";
+
+            const hiddenActionTabs = ['dashboard', 'students', 'schedule', 'records', 'reports'];
+            document.getElementById('topbar-global-actions').style.display = hiddenActionTabs.includes(tabId) ? 'none' : 'flex';
 
             renderAll();
         }
@@ -1289,7 +1359,7 @@
                 }).join('');
             }
 
-            // Milestone Alerts (15, 20, 30 classes completed in a month)
+            // Milestone alerts count only present classes in the current month.
             let milestoneListEl = document.getElementById('dashboard-milestone-list');
             let studentCompletedCounts = {};
             let currentMonthPrefix = todayStr.substring(0, 7); // YYYY-MM
@@ -1302,10 +1372,7 @@
             let milestoneHtml = "";
             appState.students.forEach(st => {
                 let count = studentCompletedCounts[st.id] || 0;
-                let targetHit = null;
-                if (count >= 30) targetHit = 30;
-                else if (count >= 20) targetHit = 20;
-                else if (count >= 15) targetHit = 15;
+                let targetHit = [15, 20, 30].filter(target => getMilestoneState(st, target) && count >= target).pop();
 
                 if (targetHit) {
                     milestoneHtml += `
@@ -1316,7 +1383,7 @@
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-slate-800 text-xs">${st.name}</h4>
-                                    <p class="text-[11px] text-violet-600 font-medium">Completed ${count} classes this month!</p>
+                                    <p class="text-[11px] text-violet-600 font-medium">Completed ${count} present classes this month.</p>
                                 </div>
                             </div>
                             <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-violet-600 text-white">Target ${targetHit} Achieved</span>
@@ -1739,7 +1806,7 @@
 
             let studentWeeks = {};
             appState.classes.forEach(c => {
-                if (c.attendance === 'Cancelled') return;
+                if (c.attendance !== 'Present' && c.attendance !== 'Absent') return;
                 let mon = formatDateStr(getMonday(c.date));
                 if (mon !== selectedMonday) return;
 
@@ -1766,18 +1833,20 @@
                 if (!st) return;
 
                 let weekLabel = getWeekLabel(group.mondayStr);
-                let isPaid = appState.paidWeeks[key] || false;
+                let currency = st.currency || 'PHP';
+                let exchangeRate = appState.exchangeRates[currency] || 1.0;
+                let paidCount = group.classes.filter(isClassPaid).length;
+                let isPaid = paidCount === group.classes.length;
 
                 let weeklyPHP = 0;
                 group.classes.forEach(c => {
                     if (c.attendance === 'Present' || c.attendance === 'Absent') {
                         weeklyPHP += computeClassPHP(c);
                     }
+                    if (isClassPaid(c)) {
+                        grandTotalPHP += computeClassPHP(c);
+                    }
                 });
-
-                if (isPaid) {
-                    grandTotalPHP += weeklyPHP;
-                }
 
                 html += `
                     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
@@ -1788,18 +1857,19 @@
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-slate-800 text-sm">${st.name} <span class="text-xs text-slate-500 font-normal">(${st.company})</span></h4>
-                                    <p class="text-xs text-slate-500">Week: ${weekLabel}</p>
+                                    <p class="text-xs font-semibold text-red-700">Week: ${weekLabel}</p>
+                                    <p class="text-xs font-semibold text-red-700">Exchange rate: 1 ${currency} = ₱${exchangeRate.toLocaleString('en-US', { maximumFractionDigits: 6 })} PHP</p>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-4">
                                 <div class="text-right">
                                     <div class="text-xs text-slate-400 font-semibold uppercase">Total PHP</div>
-                                    <div class="text-base font-bold text-slate-900">₱${weeklyPHP.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                    <div class="text-base font-bold text-red-700">₱${weeklyPHP.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                 </div>
                                 <button onclick="togglePaidStatus('${key}')" class="px-4 py-2 rounded-xl text-xs font-bold transition shadow-xs ${
                                     isPaid ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'
                                 }">
-                                    ${isPaid ? '<i class="fa-solid fa-check mr-1"></i> Paid' : 'Mark Paid'}
+                                    ${isPaid ? '<i class="fa-solid fa-check mr-1"></i> Paid' : paidCount ? 'Mark Remaining Paid' : 'Mark Paid'}
                                 </button>
                             </div>
                         </div>
@@ -1821,11 +1891,11 @@
                     let phpAmt = computeClassPHP(c);
                     html += `
                         <tr class="hover:bg-slate-50/50">
-                            <td class="py-2.5 font-medium text-slate-800">${c.date} at ${c.time}</td>
+                            <td class="py-2.5 font-semibold text-red-700">${c.date} at ${c.time}</td>
                             <td class="py-2.5 text-slate-600">${c.type}</td>
                             <td class="py-2.5 text-slate-600">${c.duration} mins</td>
                             <td class="py-2.5 font-semibold ${c.attendance === 'Present' ? 'text-emerald-600' : c.attendance === 'Absent' ? 'text-amber-600' : 'text-slate-500'}">${c.attendance}</td>
-                            <td class="py-2.5 text-right font-bold text-slate-900">₱${phpAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="py-2.5 text-right font-bold text-red-700">₱${phpAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         </tr>
                     `;
                 });
@@ -1843,10 +1913,27 @@
         }
 
         function togglePaidStatus(key) {
-            appState.paidWeeks[key] = !appState.paidWeeks[key];
+            const payableClasses = appState.classes.filter(c =>
+                getClassPaymentKey(c) === key && (c.attendance === 'Present' || c.attendance === 'Absent')
+            );
+            const allPaid = payableClasses.length > 0 && payableClasses.every(isClassPaid);
+            if (allPaid) {
+                delete appState.paidWeeks[key];
+            } else {
+                const existing = appState.paidWeeks[key];
+                const classAmounts = existing && typeof existing === 'object' && existing.classAmounts
+                    ? { ...existing.classAmounts }
+                    : {};
+                payableClasses.forEach(cls => {
+                    if (!Object.prototype.hasOwnProperty.call(classAmounts, cls.id)) {
+                        classAmounts[cls.id] = computeCurrentClassPHP(cls);
+                    }
+                });
+                appState.paidWeeks[key] = { classAmounts };
+            }
             saveState();
             renderAll();
-            showToast(appState.paidWeeks[key] ? "Marked as Paid!" : "Marked as Pending.");
+            showToast(allPaid ? "Marked as Pending." : "Marked as Paid!");
         }
 
         function populateMonthDropdowns() {
@@ -1900,13 +1987,13 @@
                 let attendanceBadge = c.attendance === 'Present' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : c.attendance === 'Absent' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200';
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
-                        <td class="py-4 px-6 font-bold text-slate-900">${c.date} <span class="text-xs text-slate-400 font-normal">(${c.time})</span></td>
+                        <td class="py-4 px-6 font-bold text-red-700">${c.date} <span class="text-xs text-red-400 font-normal">(${c.time})</span></td>
                         <td class="py-4 px-4 font-semibold text-slate-800">${st ? st.name : 'Unknown'}</td>
                         <td class="py-4 px-4 text-slate-600">${st ? st.company : '-'}</td>
                         <td class="py-4 px-4 text-slate-600">${c.type}</td>
                         <td class="py-4 px-4 text-slate-600">${c.duration} mins</td>
                         <td class="py-4 px-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold border ${attendanceBadge}">${c.attendance || 'Scheduled'}</span></td>
-                        <td class="py-4 px-6 text-right font-bold text-slate-900">₱${phpAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="py-4 px-6 text-right font-bold text-red-700">₱${phpAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>
                 `;
             }).join('');
@@ -1961,7 +2048,7 @@
                         <div class="space-y-1">
                             <div class="flex items-center justify-between text-xs font-semibold">
                                 <span class="text-slate-800">${comp}</span>
-                                <span class="text-slate-900">₱${rev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${pct}%)</span>
+                                <span class="text-red-700">₱${rev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${pct}%)</span>
                             </div>
                             <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                                 <div class="bg-indigo-600 h-full rounded-full" style="width: ${pct}%"></div>
