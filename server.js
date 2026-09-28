@@ -92,7 +92,7 @@ async function handleRequest(request, response) {
         return;
     }
 
-    const fileName = url.pathname === '/' ? '/index.html.html' : url.pathname;
+    const fileName = url.pathname === '/' ? '/index.html' : url.pathname;
     if (!['/index.html', '/index.html.html'].includes(fileName)) {
         response.writeHead(404);
         response.end('Not found.');

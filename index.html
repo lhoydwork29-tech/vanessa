@@ -913,19 +913,6 @@
             paidWeeks: {} // key: studentId_weekStart -> { classAmounts: { classId: PHP amount } }
         };
 
-        // Load from LocalStorage if available
-        function loadLocalState() {
-            try {
-                const saved = localStorage.getItem("esl_teacher_dashboard_state_v2");
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    appState = { ...appState, ...parsed };
-                }
-            } catch (e) {
-                console.error("Error loading state from localStorage:", e);
-            }
-        }
-
         function ensureAllExchangeRates() {
             const mergedKeys = Array.from(new Set([...ALL_CURRENCIES, ...Object.keys(appState.exchangeRates || {})]));
             const normalized = {};
@@ -946,12 +933,10 @@
                 if (state) {
                     appState = { ...appState, ...state };
                 } else {
-                    loadLocalState();
                     saveState();
                 }
             } catch (e) {
                 console.error("Error loading shared state:", e);
-                loadLocalState();
             }
         }
 
@@ -959,14 +944,13 @@
             try {
                 ensureAllExchangeRates();
                 const state = JSON.stringify(appState);
-                localStorage.setItem("esl_teacher_dashboard_state_v2", state);
                 fetch('/api/state', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Client-Id': syncClientId },
                     body: state
                 }).catch(e => console.error("Error saving shared state:", e));
             } catch (e) {
-                console.error("Error saving state to localStorage:", e);
+                console.error("Error preparing shared state:", e);
             }
         }
 
