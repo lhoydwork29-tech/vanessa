@@ -924,6 +924,10 @@
         }
 
         const syncClientId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+        let stateSaveQueue = Promise.resolve();
+        let sharedStateLoaded = false;
+        let sharedStateReady = false;
+        let pendingSharedState = null;
 
         async function loadState() {
             try {
@@ -932,23 +936,30 @@
                 const { state } = await response.json();
                 if (state) {
                     appState = { ...appState, ...state };
-                } else {
-                    saveState();
                 }
+                return true;
             } catch (e) {
                 console.error("Error loading shared state:", e);
+                return false;
             }
         }
 
         function saveState() {
+            if (!sharedStateReady) {
+                console.error("Shared state is not loaded; refusing to overwrite it.");
+                return;
+            }
             try {
                 ensureAllExchangeRates();
                 const state = JSON.stringify(appState);
-                fetch('/api/state', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Client-Id': syncClientId },
-                    body: state,
-                    keepalive: new TextEncoder().encode(state).byteLength <= 60 * 1024
+                stateSaveQueue = stateSaveQueue.catch(() => {}).then(async () => {
+                    const response = await fetch('/api/state', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-Client-Id': syncClientId },
+                        body: state,
+                        keepalive: new TextEncoder().encode(state).byteLength <= 60 * 1024
+                    });
+                    if (!response.ok) throw new Error(`State save failed: ${response.status}`);
                 }).catch(e => {
                     console.error("Error saving shared state:", e);
                     showToast("Changes could not be saved. Keep this page open and try again.", "error");
@@ -962,6 +973,10 @@
         sharedStateEvents.onmessage = function (event) {
             const update = JSON.parse(event.data);
             if (update.clientId === syncClientId) return;
+            if (!sharedStateLoaded) {
+                pendingSharedState = update.state;
+                return;
+            }
             appState = { ...appState, ...update.state };
             ensureAllExchangeRates();
             initThemeAndFont();
@@ -970,9 +985,14 @@
 
         // Initialize on window load
         window.onload = async function () {
-            await loadState();
+            sharedStateReady = await loadState();
+            if (pendingSharedState) {
+                appState = { ...appState, ...pendingSharedState };
+                sharedStateReady = true;
+            }
+            sharedStateLoaded = true;
             ensureAllExchangeRates();
-            snapshotLegacyPaidWeeks();
+            if (sharedStateReady) snapshotLegacyPaidWeeks();
             initThemeAndFont();
             populateCountryDropdown();
             populateTimeDropdown();
@@ -987,6 +1007,7 @@
             populateCurrencyDropdown();
             switchTab('dashboard');
             renderAll();
+            if (!sharedStateReady) showToast("Could not load shared data. Changes will not be saved until the server is available.", "error");
         };
 
         
