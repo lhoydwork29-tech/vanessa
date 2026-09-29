@@ -571,7 +571,18 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-end pt-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" onclick="exportDashboardBackup()" class="px-4 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-sm rounded-xl transition inline-flex items-center gap-2">
+                                    <i class="fa-solid fa-download" aria-hidden="true"></i>
+                                    <span>Download backup</span>
+                                </button>
+                                <label for="dashboard-backup-input" class="px-4 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-sm rounded-xl transition cursor-pointer inline-flex items-center gap-2">
+                                    <i class="fa-solid fa-upload" aria-hidden="true"></i>
+                                    <span>Restore backup</span>
+                                </label>
+                                <input id="dashboard-backup-input" type="file" accept="application/json,.json" class="hidden" onchange="importDashboardBackup(event)">
+                            </div>
                             <button onclick="saveSettings()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-sm transition">
                                 Save Settings
                             </button>
@@ -960,12 +971,16 @@
                         keepalive: new TextEncoder().encode(state).byteLength <= 60 * 1024
                     });
                     if (!response.ok) throw new Error(`State save failed: ${response.status}`);
+                    return true;
                 }).catch(e => {
                     console.error("Error saving shared state:", e);
                     showToast("Changes could not be saved. Keep this page open and try again.", "error");
+                    return false;
                 });
+                return stateSaveQueue;
             } catch (e) {
                 console.error("Error preparing shared state:", e);
+                return Promise.resolve(false);
             }
         }
 
@@ -1024,6 +1039,44 @@
                 toast.classList.add('translate-y-2', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+
+        function exportDashboardBackup() {
+            const backup = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
+            const downloadUrl = URL.createObjectURL(backup);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `dashboard-backup-${formatDateStr(new Date())}.json`;
+            link.click();
+            URL.revokeObjectURL(downloadUrl);
+            showToast('Dashboard backup downloaded.');
+        }
+
+        async function importDashboardBackup(event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            try {
+                const backup = JSON.parse(await file.text());
+                if (!backup || typeof backup !== 'object' || Array.isArray(backup) ||
+                    !Array.isArray(backup.students) || !Array.isArray(backup.classes)) {
+                    throw new Error('This file is not a valid dashboard backup.');
+                }
+                if (!window.confirm('Restore this backup? It will replace the dashboard data currently on this server.')) return;
+
+                appState = { ...appState, ...backup };
+                ensureAllExchangeRates();
+                initThemeAndFont();
+                renderAll();
+                if (!await saveState()) throw new Error('The backup could not be saved to this server.');
+                showToast('Dashboard backup restored.');
+            } catch (error) {
+                console.error('Error restoring dashboard backup:', error);
+                showToast(error.message || 'Could not restore this backup.', 'error');
+            } finally {
+                input.value = '';
+            }
         }
 
         function parseLocalDate(dateValue) {

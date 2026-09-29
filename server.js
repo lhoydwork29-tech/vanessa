@@ -1,4 +1,5 @@
 const http = require('node:http');
+const { timingSafeEqual } = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
@@ -51,7 +52,45 @@ async function writeState(state) {
     await fs.rename(temporaryFile, stateFile);
 }
 
+function matchesSecret(value, expected) {
+    const valueBuffer = Buffer.from(value);
+    const expectedBuffer = Buffer.from(expected);
+    return valueBuffer.length === expectedBuffer.length && timingSafeEqual(valueBuffer, expectedBuffer);
+}
+
+function authorizeRequest(request, response) {
+    const username = process.env.DASHBOARD_USERNAME;
+    const password = process.env.DASHBOARD_PASSWORD;
+    if (!username || !password) {
+        if (process.env.NODE_ENV !== 'production') return true;
+        response.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+        response.end('Dashboard credentials are not configured.');
+        return false;
+    }
+
+    const authorization = request.headers.authorization || '';
+    const encodedCredentials = authorization.match(/^Basic\s+(.+)$/i)?.[1];
+    if (encodedCredentials) {
+        const decodedCredentials = Buffer.from(encodedCredentials, 'base64').toString('utf8');
+        const separator = decodedCredentials.indexOf(':');
+        if (separator >= 0) {
+            const providedUsername = decodedCredentials.slice(0, separator);
+            const providedPassword = decodedCredentials.slice(separator + 1);
+            if (matchesSecret(providedUsername, username) && matchesSecret(providedPassword, password)) return true;
+        }
+    }
+
+    response.writeHead(401, {
+        'WWW-Authenticate': 'Basic realm="ESL Teacher Dashboard", charset="UTF-8"',
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store'
+    });
+    response.end('Authentication required.');
+    return false;
+}
+
 async function handleRequest(request, response) {
+    if (!authorizeRequest(request, response)) return;
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
     const method = request.method || 'GET';
 
