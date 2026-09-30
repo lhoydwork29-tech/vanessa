@@ -141,7 +141,12 @@ async function handleRequest(request, response) {
     }
 
     const fileName = url.pathname === '/' ? '/index.html' : url.pathname;
-    if (!['/index.html', '/index.html.html'].includes(fileName)) {
+    const publicFiles = {
+        '/index.html': 'text/html; charset=utf-8',
+        '/index.html.html': 'text/html; charset=utf-8',
+        '/supabase-config.js': 'text/javascript; charset=utf-8'
+    };
+    if (!Object.prototype.hasOwnProperty.call(publicFiles, fileName)) {
         response.writeHead(404);
         response.end(method === 'HEAD' ? undefined : 'Not found.');
         return;
@@ -150,7 +155,7 @@ async function handleRequest(request, response) {
     try {
         const content = await fs.readFile(path.join(root, fileName.slice(1)));
         response.writeHead(200, {
-            'Content-Type': 'text/html; charset=utf-8',
+            'Content-Type': publicFiles[fileName],
             'Cache-Control': 'no-store'
         });
         if (method === 'HEAD') {

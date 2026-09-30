@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESL Teacher Dashboard</title>
+    <title>Teacher Vanessa's Private Class Dashboard</title>
+    <script src="./supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for icons -->
@@ -91,6 +93,29 @@
 </head>
 <body class="h-full bg-slate-50 text-slate-800 font-sans antialiased transition-colors duration-300" id="body-root">
 
+    <section id="cloud-gate" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 p-4 text-slate-900">
+        <div class="w-full max-w-md rounded-2xl bg-white p-7 shadow-2xl">
+            <h1 class="text-xl font-bold">Teacher Vanessa’s Private Class Dashboard</h1>
+            <p id="cloud-gate-message" class="mt-3 text-sm leading-6 text-slate-600">Checking your secure dashboard connection...</p>
+            <div id="cloud-auth-panel" class="mt-6 hidden">
+                <form id="cloud-auth-form" class="space-y-4">
+                    <label class="block text-sm font-semibold text-slate-700">Email
+                        <input id="cloud-auth-email" type="email" autocomplete="email" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm">
+                    </label>
+                    <label class="block text-sm font-semibold text-slate-700">Password
+                        <input id="cloud-auth-password" type="password" autocomplete="current-password" minlength="8" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm">
+                    </label>
+                    <div class="flex gap-3">
+                        <button id="cloud-login-button" type="submit" class="flex-1 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Sign in</button>
+                        <button id="cloud-signup-button" type="button" class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Create account</button>
+                    </div>
+                </form>
+                <p id="cloud-auth-error" role="status" class="mt-4 hidden text-sm text-rose-700"></p>
+            </div>
+            <p id="cloud-config-help" class="mt-5 hidden text-sm leading-6 text-slate-600">Add your Supabase project URL and public anon key in <strong>supabase-config.js</strong>, then publish the repository. Setup instructions are in <strong>README.md</strong>. Do not put a service-role key here.</p>
+        </div>
+    </section>
+
     <div id="app" class="flex h-screen overflow-hidden">
         
         <!-- SIDEBAR NAVIGATION -->
@@ -177,6 +202,15 @@
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add Class</span>
                     </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="sync-status" aria-live="polite" class="text-xs font-semibold text-slate-500">Connecting...</span>
+                    <span id="sync-account" class="hidden max-w-32 truncate text-xs text-slate-500"></span>
+                    <button id="cloud-signout-button" onclick="signOutDashboard()" class="hidden text-xs font-semibold text-slate-600 hover:text-rose-700">Sign out</button>
+                    <div id="sync-conflict-actions" class="hidden items-center gap-2">
+                        <button onclick="resolveCloudConflict('reload')" class="text-xs font-semibold text-indigo-700">Reload cloud</button>
+                        <button onclick="resolveCloudConflict('overwrite')" class="text-xs font-semibold text-rose-700">Keep mine</button>
+                    </div>
                 </div>
             </header>
 
@@ -415,16 +449,34 @@
                             <p class="text-xs text-slate-500">Monthly earnings, attendance statistics, and company breakdowns.</p>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
+                            <select id="report-student-select" onchange="renderReports()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="all">All Students</option>
+                            </select>
+                            <select id="report-week-select" onchange="renderReports()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="all">All Weeks</option>
+                            </select>
                             <select id="report-status-select" onchange="renderReports()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 <option value="all">All Attendance</option>
                                 <option value="Present">Present</option>
                                 <option value="Absent">Absent</option>
                                 <option value="Cancelled">Cancelled</option>
+                                <option value="Makeup">Makeup</option>
                             </select>
                             <select id="report-month-select" onchange="renderReports()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 <!-- Populated dynamically -->
                             </select>
                         </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <div class="bg-white p-5 rounded-xl border border-slate-200"><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Weekly Completed</p><h3 id="report-week-completed" class="mt-2 text-xl font-bold">0</h3></div>
+                        <div class="bg-white p-5 rounded-xl border border-slate-200"><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Weekly Absent</p><h3 id="report-week-absent" class="mt-2 text-xl font-bold">0</h3></div>
+                        <div class="bg-white p-5 rounded-xl border border-slate-200"><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Weekly Cancelled</p><h3 id="report-week-cancelled" class="mt-2 text-xl font-bold">0</h3></div>
+                        <div class="bg-white p-5 rounded-xl border border-slate-200"><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Weekly Payment</p><h3 id="report-week-payment" class="mt-2 text-xl font-bold text-red-700">₱0.00</h3></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+                        <h4 class="font-bold text-slate-800 text-base mb-4">Weekly Payment by Student</h4>
+                        <div id="report-week-by-student" class="space-y-3"></div>
                     </div>
 
                     <!-- Analytics Grid Cards -->
@@ -482,6 +534,32 @@
                                         <span>Remove photo</span>
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Teacher Name</label>
+                                <input type="text" id="settings-teacher-name-input" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" value="Vanessa">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Teacher Timezone</label>
+                                <input type="text" id="settings-teacher-timezone-input" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" value="Asia/Manila" placeholder="Asia/Manila">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Free-Class Reward</label>
+                                <select id="settings-reward-threshold" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="15">Every 15 completed classes</option>
+                                    <option value="20">Every 20 completed classes</option>
+                                    <option value="30">Every 30 completed classes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Makeup Payment</label>
+                                <select id="settings-makeup-payment" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="false">Do not charge a separate makeup</option>
+                                    <option value="true">Charge makeup separately</option>
+                                </select>
                             </div>
                         </div>
 
@@ -609,6 +687,10 @@
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Student Name</label>
                     <input type="text" id="modal-student-name" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Tanaka Ken">
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Age</label>
+                    <input type="number" id="modal-student-age" min="1" max="120" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Age">
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Company / Independent</label>
@@ -624,7 +706,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Timezone (Auto-aligned)</label>
-                        <input type="text" id="modal-student-timezone" class="w-full px-3.5 py-2 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-600" readonly>
+                        <input type="text" id="modal-student-timezone" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Asia/Tokyo">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Currency</label>
@@ -755,6 +837,12 @@
                     </button>
                     <button onclick="markClassAttendance('Cancelled')" class="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs rounded-xl border border-rose-200 transition flex items-center justify-center space-x-1.5">
                         <i class="fa-solid fa-ban"></i> <span>Cancelled</span>
+                    </button>
+                    <button onclick="markClassAttendance('Makeup')" class="px-3 py-2.5 bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold text-xs rounded-xl border border-sky-200 transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-rotate"></i> <span>Makeup</span>
+                    </button>
+                    <button onclick="markClassAttendance('Scheduled')" class="px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-regular fa-clock"></i> <span>Scheduled</span>
                     </button>
                     <button onclick="editClassFromAction()" class="px-3 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl border border-indigo-200 transition flex items-center justify-center space-x-1.5">
                         <i class="fa-solid fa-pen"></i> <span>Edit Slot</span>
@@ -900,28 +988,33 @@
         };
 
         // Default State
+        function getTeacherDate(timezone = 'Asia/Manila') {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(new Date());
+            const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+            return `${values.year}-${values.month}-${values.day}`;
+        }
+
+        function defaultSelectedWeek() {
+            return formatDateStr(getMonday(getTeacherDate()));
+        }
+
         let appState = {
-            brandTitle: "ESL Teacher Dashboard",
+            brandTitle: "Teacher Vanessa's Private Class Dashboard",
             avatarUrl: "",
             theme: "indigo",
             font: "Inter",
             inspirationalQuote: "Education is the passport to the future, for tomorrow belongs to those who prepare for it today.",
             exchangeRates: { ...DEFAULT_EXCHANGE_RATES },
-            currentSelectedWeekStart: "2026-09-21", // Default week of Sep 21 - Sep 27, 2026
-            students: [
-                { id: "s1", name: "Tanaka Ken", company: "Native Camp", country: "Japan", timezone: "GMT+9 (JST)", currency: "JPY", rate25: 400, rate50: 800, startDate: "2026-01-10", status: "Active", notes: "Loves business English and pronunciation practice.", milestones: { 15: true, 20: false, 30: false } },
-                { id: "s2", name: "Kim Min-ji", company: "Independent", country: "South Korea", timezone: "GMT+9 (KST)", currency: "KRW", rate25: 8500, rate50: 17000, startDate: "2026-02-15", status: "Active", notes: "Preparing for IELTS speaking test.", milestones: { 15: true, 20: true, 30: false } },
-                { id: "s3", name: "Wang Wei", company: "51Talk", country: "China", timezone: "GMT+8 (CST)", currency: "CNY", rate25: 35, rate50: 70, startDate: "2026-03-01", status: "Active", notes: "Junior student, needs patience with vocabulary.", milestones: { 15: false, 20: false, 30: false } }
-            ],
-            classes: [
-                { id: "c1", studentId: "s1", date: "2026-09-21", time: "09:00", type: "Regular", duration: 25, attendance: "Present", paidStatus: "Pending" },
-                { id: "c2", studentId: "s2", date: "2026-09-21", time: "10:00", type: "Regular", duration: 50, attendance: "Present", paidStatus: "Pending" },
-                { id: "c3", studentId: "s3", date: "2026-09-22", time: "14:00", type: "Trial Class", duration: 25, attendance: "Present", paidStatus: "Pending" },
-                { id: "c4", studentId: "s1", date: "2026-09-23", time: "09:00", type: "Regular", duration: 25, attendance: "Absent", paidStatus: "Pending" },
-                { id: "c5", studentId: "s2", date: "2026-09-24", time: "11:00", type: "Free Class", duration: 50, attendance: "Present", paidStatus: "Pending" },
-                { id: "c6", studentId: "s3", date: "2026-09-25", time: "15:00", type: "Regular", duration: 50, attendance: "Present", paidStatus: "Paid" }
-            ],
-            paidWeeks: {} // key: studentId_weekStart -> { classAmounts: { classId: PHP amount } }
+            teacherName: "Vanessa",
+            teacherTimezone: "Asia/Manila",
+            rewardThreshold: 15,
+            chargeMakeupSeparately: false,
+            currentSelectedWeekStart: defaultSelectedWeek(),
+            students: [],
+            classes: [],
+            paidWeeks: {}
         };
 
         function ensureAllExchangeRates() {
@@ -939,8 +1032,66 @@
         let sharedStateLoaded = false;
         let sharedStateReady = false;
         let pendingSharedState = null;
+        let supabaseClient = null;
+        let cloudUserId = null;
+        let cloudUpdatedAt = null;
+        let cloudChannel = null;
+        let cloudConflict = false;
+        let sharedStateDirty = false;
+        let saveGeneration = 0;
+        let clockInterval = null;
+
+        function setSyncStatus(message, type = 'info') {
+            const status = document.getElementById('sync-status');
+            if (!status) return;
+            status.textContent = message;
+            status.className = `text-xs font-semibold ${type === 'error' ? 'text-rose-700' : type === 'saving' ? 'text-amber-700' : 'text-emerald-700'}`;
+        }
+
+        function showCloudGate(message, mode = 'config') {
+            document.getElementById('cloud-gate').classList.remove('hidden');
+            document.getElementById('cloud-gate-message').textContent = message;
+            document.getElementById('cloud-auth-panel').classList.toggle('hidden', mode !== 'auth');
+            document.getElementById('cloud-config-help').classList.toggle('hidden', mode !== 'config');
+        }
+
+        function finishDashboardInitialization() {
+            sharedStateLoaded = true;
+            sharedStateReady = true;
+            ensureAllExchangeRates();
+            normalizeClassRateSnapshots();
+            initThemeAndFont();
+            populateCountryDropdown();
+            populateTimeDropdown();
+            populateExchangeRateManager();
+            populateMonthDropdowns();
+            populateCurrencyDropdown();
+            switchTab('dashboard');
+            renderAll();
+            document.getElementById('cloud-gate').classList.add('hidden');
+            if (!clockInterval) clockInterval = setInterval(updateLiveClock, 1000);
+            updateLiveClock();
+            if (cloudUserId) {
+                document.getElementById('sync-account').textContent = cloudUserId;
+                document.getElementById('sync-account').classList.remove('hidden');
+                document.getElementById('cloud-signout-button').classList.remove('hidden');
+            }
+            if (appState.classes.some(cls => !Number.isFinite(cls.appliedRate))) saveState();
+        }
 
         async function loadState() {
+            if (supabaseClient && cloudUserId) {
+                const { data, error } = await supabaseClient.from('dashboard_state')
+                    .select('state, updated_at').eq('user_id', cloudUserId).maybeSingle();
+                if (error) throw error;
+                if (data) {
+                    appState = { ...appState, ...data.state };
+                    cloudUpdatedAt = data.updated_at;
+                } else {
+                    cloudUpdatedAt = null;
+                }
+                return true;
+            }
             try {
                 const response = await fetch('/api/state');
                 if (!response.ok) throw new Error(`State request failed: ${response.status}`);
@@ -949,21 +1100,36 @@
                     appState = { ...appState, ...state };
                 }
                 return true;
-            } catch (e) {
-                console.error("Error loading shared state:", e);
-                return false;
-            }
+            } catch (e) { throw e; }
         }
 
         function saveState() {
-            if (!sharedStateReady) {
+            if (!sharedStateReady || cloudConflict) {
                 console.error("Shared state is not loaded; refusing to overwrite it.");
                 return;
             }
             try {
                 ensureAllExchangeRates();
                 const state = JSON.stringify(appState);
+                const generation = ++saveGeneration;
+                sharedStateDirty = true;
+                setSyncStatus('Saving...', 'saving');
                 stateSaveQueue = stateSaveQueue.catch(() => {}).then(async () => {
+                    if (supabaseClient && cloudUserId) {
+                        const { data, error } = await supabaseClient.rpc('save_dashboard_state', {
+                            p_state: JSON.parse(state),
+                            p_expected_updated_at: cloudUpdatedAt
+                        });
+                        if (error) throw error;
+                        const savedRow = Array.isArray(data) ? data[0] : data;
+                        if (!savedRow) {
+                            cloudConflict = true;
+                            setSyncStatus('Sync conflict. Reload or keep your changes.', 'error');
+                            document.getElementById('sync-conflict-actions').classList.remove('hidden');
+                            throw new Error('Another browser saved newer data. Resolve the sync conflict before continuing.');
+                        }
+                        cloudUpdatedAt = savedRow.updated_at;
+                    } else {
                     const response = await fetch('/api/state', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'X-Client-Id': syncClientId },
@@ -971,9 +1137,15 @@
                         keepalive: new TextEncoder().encode(state).byteLength <= 60 * 1024
                     });
                     if (!response.ok) throw new Error(`State save failed: ${response.status}`);
+                    }
+                    if (generation === saveGeneration) {
+                        sharedStateDirty = false;
+                        setSyncStatus('Saved', 'success');
+                    }
                     return true;
                 }).catch(e => {
                     console.error("Error saving shared state:", e);
+                    if (!cloudConflict) setSyncStatus('Unable to connect. Changes are not saved.', 'error');
                     showToast("Changes could not be saved. Keep this page open and try again.", "error");
                     return false;
                 });
@@ -984,45 +1156,145 @@
             }
         }
 
-        const sharedStateEvents = new EventSource('/api/events');
-        sharedStateEvents.onmessage = function (event) {
-            const update = JSON.parse(event.data);
-            if (update.clientId === syncClientId) return;
-            if (!sharedStateLoaded) {
-                pendingSharedState = update.state;
+        async function startCloudSession(user) {
+            cloudUserId = user.id;
+            try {
+                await loadState();
+                finishDashboardInitialization();
+                setSyncStatus('Connected and synced', 'success');
+                cloudChannel = supabaseClient.channel(`dashboard-state-${cloudUserId}`)
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'dashboard_state', filter: `user_id=eq.${cloudUserId}` }, payload => {
+                        const row = payload.new;
+                        if (!row || !row.state || row.updated_at === cloudUpdatedAt) return;
+                        if (sharedStateDirty && JSON.stringify(appState) !== JSON.stringify(row.state)) {
+                            cloudConflict = true;
+                            setSyncStatus('Sync conflict. Reload or keep your changes.', 'error');
+                            document.getElementById('sync-conflict-actions').classList.remove('hidden');
+                            return;
+                        }
+                        cloudUpdatedAt = row.updated_at;
+                        appState = { ...appState, ...row.state };
+                        ensureAllExchangeRates();
+                        initThemeAndFont();
+                        renderAll();
+                        setSyncStatus('Updated from another device', 'success');
+                    }).subscribe();
+            } catch (error) {
+                console.error('Unable to load cloud dashboard:', error);
+                setSyncStatus('Unable to connect to the database.', 'error');
+                showCloudGate('Unable to connect to the database. Please check your internet connection and confirm the Supabase setup.', 'auth');
+                const errorElement = document.getElementById('cloud-auth-error');
+                errorElement.textContent = error.message;
+                errorElement.classList.remove('hidden');
+            }
+        }
+
+        async function resolveCloudConflict(action) {
+            if (action === 'reload') {
+                try {
+                    const { data, error } = await supabaseClient.from('dashboard_state').select('state, updated_at').eq('user_id', cloudUserId).single();
+                    if (error) throw error;
+                    appState = { ...appState, ...data.state };
+                    cloudUpdatedAt = data.updated_at;
+                    cloudConflict = false;
+                    sharedStateDirty = false;
+                    document.getElementById('sync-conflict-actions').classList.add('hidden');
+                    renderAll();
+                    setSyncStatus('Cloud version loaded', 'success');
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
                 return;
             }
-            appState = { ...appState, ...update.state };
-            ensureAllExchangeRates();
-            initThemeAndFont();
-            renderAll();
-        };
+            if (!window.confirm('Replace the newer cloud data with the changes on this device?')) return;
+            try {
+                const { data, error } = await supabaseClient.from('dashboard_state').select('updated_at').eq('user_id', cloudUserId).single();
+                if (error) throw error;
+                cloudUpdatedAt = data.updated_at;
+                cloudConflict = false;
+                sharedStateDirty = false;
+                document.getElementById('sync-conflict-actions').classList.add('hidden');
+                saveState();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function signOutDashboard() {
+            if (cloudChannel) await supabaseClient.removeChannel(cloudChannel);
+            await supabaseClient.auth.signOut();
+            window.location.reload();
+        }
+
+        document.getElementById('cloud-auth-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const email = document.getElementById('cloud-auth-email').value.trim();
+            const password = document.getElementById('cloud-auth-password').value;
+            const errorElement = document.getElementById('cloud-auth-error');
+            errorElement.classList.add('hidden');
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                errorElement.textContent = error.message;
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            await startCloudSession(data.user);
+        });
+
+        document.getElementById('cloud-signup-button').addEventListener('click', async () => {
+            const email = document.getElementById('cloud-auth-email').value.trim();
+            const password = document.getElementById('cloud-auth-password').value;
+            const errorElement = document.getElementById('cloud-auth-error');
+            if (!email || password.length < 8) {
+                errorElement.textContent = 'Enter a valid email and a password with at least 8 characters.';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+                errorElement.textContent = error.message;
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            if (data.session) await startCloudSession(data.user);
+            else {
+                errorElement.textContent = 'Check your email to confirm the account, then sign in.';
+                errorElement.className = 'mt-4 text-sm text-emerald-700';
+            }
+        });
 
         // Initialize on window load
         window.onload = async function () {
-            sharedStateReady = await loadState();
-            if (pendingSharedState) {
-                appState = { ...appState, ...pendingSharedState };
-                sharedStateReady = true;
+            const config = window.DASHBOARD_SUPABASE_CONFIG || {};
+            if (config.url && config.anonKey && window.supabase?.createClient) {
+                supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+                const { data, error } = await supabaseClient.auth.getSession();
+                if (error) {
+                    showCloudGate(error.message, 'auth');
+                    return;
+                }
+                if (data.session) await startCloudSession(data.session.user);
+                else showCloudGate('Sign in with your private dashboard account, or create your account to get started.', 'auth');
+                return;
             }
-            sharedStateLoaded = true;
-            ensureAllExchangeRates();
-            if (sharedStateReady) snapshotLegacyPaidWeeks();
-            initThemeAndFont();
-            populateCountryDropdown();
-            populateTimeDropdown();
-            populateExchangeRateManager();
-            populateMonthDropdowns();
-            
-            // Start Live Clock
-            setInterval(updateLiveClock, 1000);
-            updateLiveClock();
-
-            // Initial render
-            populateCurrencyDropdown();
-            switchTab('dashboard');
-            renderAll();
-            if (!sharedStateReady) showToast("Could not load shared data. Changes will not be saved until the server is available.", "error");
+            try {
+                await loadState();
+                finishDashboardInitialization();
+                setSyncStatus('Connected to local development server', 'success');
+                const sharedStateEvents = new EventSource('/api/events');
+                sharedStateEvents.onmessage = event => {
+                    const update = JSON.parse(event.data);
+                    if (update.clientId === syncClientId) return;
+                    appState = { ...appState, ...update.state };
+                    ensureAllExchangeRates();
+                    initThemeAndFont();
+                    renderAll();
+                };
+            } catch (error) {
+                console.error('Dashboard backend is not configured:', error);
+                setSyncStatus('Database setup required', 'error');
+                showCloudGate('This static GitHub Pages site needs a Supabase project configured before it can load or save your dashboard data.', 'config');
+            }
         };
 
         
@@ -1134,21 +1406,42 @@
         }
 
         function resetToCurrentWeek() {
-            let todayMon = formatDateStr(getMonday(new Date()));
+            let todayMon = formatDateStr(getMonday(getTeacherDate(appState.teacherTimezone)));
             appState.currentSelectedWeekStart = todayMon;
             saveState();
             renderAll();
         }
 
-        // Compute PHP amount for a class
+        function isClassPayable(cls) {
+            const attendanceIsPayable = cls.attendance === 'Present' || cls.attendance === 'Absent' || (cls.attendance === 'Makeup' && appState.chargeMakeupSeparately);
+            return attendanceIsPayable && cls.type !== 'Trial Class' && cls.type !== 'Free Class';
+        }
+
+        function isClassCompleted(cls) {
+            return cls.attendance === 'Present' || cls.attendance === 'Makeup';
+        }
+
+        function normalizeClassRateSnapshots() {
+            appState.classes.forEach(cls => {
+                const student = appState.students.find(item => item.id === cls.studentId);
+                if (!student) return;
+                if (!Number.isFinite(cls.appliedRate)) cls.appliedRate = cls.duration === 50 ? student.rate50 : student.rate25;
+                if (!cls.appliedCurrency) cls.appliedCurrency = student.currency || 'PHP';
+                if (!Number.isFinite(cls.paymentAmount)) {
+                    cls.paymentAmount = cls.type === 'Free Class' || cls.type === 'Trial Class' ? 0 : cls.appliedRate;
+                }
+            });
+        }
+
+        // Compute PHP value using the class's saved rate and currency.
         function computeCurrentClassPHP(cls) {
             let student = appState.students.find(s => s.id === cls.studentId);
             if (!student) return 0;
             if (cls.type === 'Free Class' || cls.type === 'Trial Class' || cls.attendance === 'Cancelled') {
                 return 0;
             }
-            let rate = cls.duration === 50 ? student.rate50 : student.rate25;
-            let currency = student.currency || 'PHP';
+            let rate = Number.isFinite(cls.paymentAmount) ? cls.paymentAmount : (Number.isFinite(cls.appliedRate) ? cls.appliedRate : cls.duration === 50 ? student.rate50 : student.rate25);
+            let currency = cls.appliedCurrency || student.currency || 'PHP';
             let exchangeRate = appState.exchangeRates[currency] || 1.0;
             return rate * exchangeRate;
         }
@@ -1162,7 +1455,7 @@
                 if (appState.paidWeeks[key] !== true) return;
                 const classAmounts = {};
                 appState.classes.forEach(cls => {
-                    if (getClassPaymentKey(cls) === key && (cls.attendance === 'Present' || cls.attendance === 'Absent')) {
+                    if (getClassPaymentKey(cls) === key && isClassPayable(cls)) {
                         classAmounts[cls.id] = computeCurrentClassPHP(cls);
                     }
                 });
@@ -1172,6 +1465,7 @@
         }
 
         function getLockedClassPHP(cls) {
+            if (Number.isFinite(cls.paidAmountPHP)) return cls.paidAmountPHP;
             const payment = appState.paidWeeks[getClassPaymentKey(cls)];
             if (payment === true) return computeCurrentClassPHP(cls);
             if (!payment || typeof payment !== 'object' || !payment.classAmounts) return null;
@@ -1180,19 +1474,22 @@
         }
 
         function isClassPaid(cls) {
+            if (cls.paidStatus === 'Paid') return true;
             const payment = appState.paidWeeks[getClassPaymentKey(cls)];
             return payment === true || getLockedClassPHP(cls) !== null;
         }
 
         function computeClassPHP(cls) {
+            if (!isClassPayable(cls)) return 0;
             const lockedAmount = getLockedClassPHP(cls);
             return lockedAmount === null ? computeCurrentClassPHP(cls) : lockedAmount;
         }
 
         function updateLiveClock() {
             let now = new Date();
-            let timeStr = now.toLocaleTimeString();
-            let dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timezone = appState.teacherTimezone || 'Asia/Manila';
+            let timeStr = now.toLocaleTimeString('en-US', { timeZone: timezone });
+            let dateStr = now.toLocaleDateString('en-US', { timeZone: timezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             
             let clockEl = document.getElementById('header-clock');
             if (clockEl) clockEl.innerText = timeStr;
@@ -1202,7 +1499,7 @@
 
             let greetingEl = document.getElementById('greeting-heading');
             if (greetingEl) {
-                let hour = now.getHours();
+                let hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: 'numeric', hour12: false }).format(now));
                 let greet = "Good morning";
                 if (hour >= 12 && hour < 17) greet = "Good afternoon";
                 else if (hour >= 17) greet = "Good evening";
@@ -1295,6 +1592,10 @@
         function initThemeAndFont() {
             document.getElementById('brand-title').innerText = appState.brandTitle;
             document.getElementById('settings-brand-title-input').value = appState.brandTitle;
+            document.getElementById('settings-teacher-name-input').value = appState.teacherName || 'Vanessa';
+            document.getElementById('settings-teacher-timezone-input').value = appState.teacherTimezone || 'Asia/Manila';
+            document.getElementById('settings-reward-threshold').value = String(appState.rewardThreshold || 15);
+            document.getElementById('settings-makeup-payment').value = String(!!appState.chargeMakeupSeparately);
             document.getElementById('settings-avatar-url-input').value = appState.avatarUrl;
             document.getElementById('settings-theme-select').value = appState.theme;
             document.getElementById('settings-font-select').value = appState.font;
@@ -1321,6 +1622,17 @@
 
         function saveSettings() {
             appState.brandTitle = document.getElementById('settings-brand-title-input').value || "ESL Dashboard";
+            appState.teacherName = document.getElementById('settings-teacher-name-input').value.trim() || 'Vanessa';
+            const timezoneInput = document.getElementById('settings-teacher-timezone-input').value.trim() || 'Asia/Manila';
+            try {
+                new Intl.DateTimeFormat('en-US', { timeZone: timezoneInput });
+            } catch (error) {
+                showToast('Enter a valid IANA timezone, such as Asia/Manila.', 'error');
+                return;
+            }
+            appState.teacherTimezone = timezoneInput;
+            appState.rewardThreshold = Number(document.getElementById('settings-reward-threshold').value) || 15;
+            appState.chargeMakeupSeparately = document.getElementById('settings-makeup-payment').value === 'true';
             appState.avatarUrl = document.getElementById('settings-avatar-url-input').value || "";
             appState.theme = document.getElementById('settings-theme-select').value;
             appState.font = document.getElementById('settings-font-select').value;
@@ -1410,7 +1722,7 @@
         }
 
         function renderDashboard() {
-            let todayStr = formatDateStr(new Date());
+            let todayStr = getTeacherDate(appState.teacherTimezone);
             let todayClasses = appState.classes.filter(c => c.date === todayStr);
             let todayCompleted = todayClasses.filter(c => c.attendance === 'Present').length;
             
@@ -1424,7 +1736,7 @@
 
             let weekRevenue = 0;
             weekClasses.forEach(c => {
-                if (c.attendance === 'Present' || c.attendance === 'Absent') {
+                if (isClassPayable(c)) {
                     weekRevenue += computeClassPHP(c);
                 }
             });
@@ -1456,12 +1768,11 @@
                 }).join('');
             }
 
-            // Milestone alerts count only present classes in the current month.
+            // Reward progress counts completed classes only, never future scheduled slots.
             let milestoneListEl = document.getElementById('dashboard-milestone-list');
             let studentCompletedCounts = {};
-            let currentMonthPrefix = todayStr.substring(0, 7); // YYYY-MM
             appState.classes.forEach(c => {
-                if (c.date.startsWith(currentMonthPrefix) && c.attendance === 'Present') {
+                if (c.attendance === 'Present' || c.attendance === 'Makeup') {
                     studentCompletedCounts[c.studentId] = (studentCompletedCounts[c.studentId] || 0) + 1;
                 }
             });
@@ -1469,9 +1780,9 @@
             let milestoneHtml = "";
             appState.students.forEach(st => {
                 let count = studentCompletedCounts[st.id] || 0;
-                let targetHit = [15, 20, 30].filter(target => getMilestoneState(st, target) && count >= target).pop();
+                let targetHit = Number(appState.rewardThreshold) || 15;
 
-                if (targetHit) {
+                if (count >= targetHit) {
                     milestoneHtml += `
                         <div class="flex items-center justify-between p-3.5 rounded-xl border border-violet-100 bg-violet-50/40">
                             <div class="flex items-center space-x-3">
@@ -1480,17 +1791,17 @@
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-slate-800 text-xs">${st.name}</h4>
-                                    <p class="text-[11px] text-violet-600 font-medium">Completed ${count} present classes this month.</p>
+                                    <p class="text-[11px] text-violet-600 font-medium">${st.name} has completed ${count} classes. Free class reward is available.</p>
                                 </div>
                             </div>
-                            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-violet-600 text-white">Target ${targetHit} Achieved</span>
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-violet-600 text-white">Reward available</span>
                         </div>
                     `;
                 }
             });
 
             if (!milestoneHtml) {
-                milestoneHtml = `<div class="text-center py-8 text-slate-400 text-xs">No milestone targets hit yet this month (Targets: 15, 20, 30).</div>`;
+                milestoneHtml = `<div class="text-center py-8 text-slate-400 text-xs">No free-class rewards available yet. Target: ${Number(appState.rewardThreshold) || 15} completed classes.</div>`;
             }
             milestoneListEl.innerHTML = milestoneHtml;
         }
@@ -1528,6 +1839,7 @@
                     document.getElementById('student-modal-title').innerText = "Edit Student";
                     document.getElementById('student-edit-id').value = st.id;
                     document.getElementById('modal-student-name').value = st.name;
+                    document.getElementById('modal-student-age').value = st.age || '';
                     document.getElementById('modal-student-company').value = st.company;
                     document.getElementById('modal-student-country').value = st.country;
                     document.getElementById('modal-student-timezone').value = st.timezone;
@@ -1545,12 +1857,13 @@
                 document.getElementById('student-modal-title').innerText = "Add New Student";
                 document.getElementById('student-edit-id').value = "";
                 document.getElementById('modal-student-name').value = "";
+                document.getElementById('modal-student-age').value = "";
                 document.getElementById('modal-student-company').value = "";
                 document.getElementById('modal-student-country').selectedIndex = 0;
                 onStudentCountryChange();
                 document.getElementById('modal-student-rate25').value = 100;
                 document.getElementById('modal-student-rate50').value = 200;
-                document.getElementById('modal-student-startdate').value = formatDateStr(new Date());
+                document.getElementById('modal-student-startdate').value = getTeacherDate(appState.teacherTimezone);
                 document.getElementById('modal-student-status').value = "Active";
                 document.getElementById('modal-student-notes').value = "";
                 document.getElementById('student-milestone-15').checked = false;
@@ -1574,6 +1887,7 @@
             let studentData = {
                 id: id || 's_' + Date.now(),
                 name: name,
+                age: Number(document.getElementById('modal-student-age').value) || null,
                 company: document.getElementById('modal-student-company').value.trim() || 'Independent',
                 country: document.getElementById('modal-student-country').value,
                 timezone: document.getElementById('modal-student-timezone').value,
@@ -1605,6 +1919,7 @@
         }
 
         function deleteStudent(studentId) {
+            if (!window.confirm('Delete this student and all related class and payment history? This cannot be undone.')) return;
             appState.students = appState.students.filter(s => s.id !== studentId);
             appState.classes = appState.classes.filter(c => c.studentId !== studentId);
             saveState();
@@ -1700,7 +2015,7 @@
             } else {
                 document.getElementById('class-modal-title').innerText = "Schedule New Class Slot";
                 document.getElementById('class-edit-id').value = "";
-                document.getElementById('modal-class-date').value = prefillDate || formatDateStr(new Date());
+                document.getElementById('modal-class-date').value = prefillDate || getTeacherDate(appState.teacherTimezone);
                 if (prefillTime) document.getElementById('modal-class-time').value = prefillTime;
                 document.getElementById('modal-class-type').value = "Regular";
                 document.getElementById('modal-class-duration').value = "25";
@@ -1725,15 +2040,18 @@
             }
 
             // Time conflict check (overlapping time ranges)
-            let [newH, newM] = time.split(':').map(Number);
-            let newStartMinutes = newH * 60 + newM;
+            const scheduleMinute = value => {
+                const [hour, minute] = value.split(':').map(Number);
+                const total = hour * 60 + minute;
+                return total < 8 * 60 ? total + 24 * 60 : total;
+            };
+            let newStartMinutes = scheduleMinute(time);
             let newEndMinutes = newStartMinutes + duration;
 
             let hasConflict = appState.classes.some(c => {
                 if (c.id === id) return false; // ignore self when editing
                 if (c.date !== date) return false;
-                let [cH, cM] = c.time.split(':').map(Number);
-                let cStartMinutes = cH * 60 + cM;
+                let cStartMinutes = scheduleMinute(c.time);
                 let cEndMinutes = cStartMinutes + c.duration;
 
                 // Check overlap condition
@@ -1745,15 +2063,28 @@
                 return;
             }
 
+            const student = appState.students.find(item => item.id === studentId);
+            const previousClass = id ? appState.classes.find(item => item.id === id) : null;
+            const sameRateBasis = previousClass && previousClass.studentId === studentId && previousClass.duration === duration;
+            const appliedRate = sameRateBasis && Number.isFinite(previousClass.appliedRate)
+                ? previousClass.appliedRate
+                : duration === 50 ? student.rate50 : student.rate25;
+            const appliedCurrency = sameRateBasis && previousClass.appliedCurrency
+                ? previousClass.appliedCurrency
+                : student.currency || 'PHP';
             let classData = {
-                id: id || 'c_' + Date.now(),
+                id: id || (window.crypto?.randomUUID ? crypto.randomUUID() : `c_${Date.now()}_${Math.random()}`),
                 studentId: studentId,
                 date: date,
                 time: time,
                 type: type,
                 duration: duration,
+                appliedRate,
+                appliedCurrency,
+                paymentAmount: type === 'Free Class' || type === 'Trial Class' ? 0 : appliedRate,
                 attendance: id ? (appState.classes.find(c => c.id === id)?.attendance || "Scheduled") : "Scheduled",
-                paidStatus: id ? (appState.classes.find(c => c.id === id)?.paidStatus || "Pending") : "Pending"
+                paidStatus: id ? (appState.classes.find(c => c.id === id)?.paidStatus || "Pending") : "Pending",
+                paidAmountPHP: id ? appState.classes.find(c => c.id === id)?.paidAmountPHP : undefined
             };
 
             if (id) {
@@ -1815,6 +2146,7 @@
 
         function deleteClassFromAction() {
             let id = document.getElementById('action-class-id').value;
+            if (!window.confirm('Delete this class record? Related payment history for this class will also be removed.')) return;
             appState.classes = appState.classes.filter(c => c.id !== id);
             saveState();
             closeClassActionModal();
@@ -1826,74 +2158,55 @@
         function renderScheduleGrid() {
             let gridWrapper = document.getElementById('schedule-grid-wrapper');
             let weekDays = getWeekDays(appState.currentSelectedWeekStart);
-
-            let hoursList = [];
-            for (let h = 8; h <= 23; h++) { hoursList.push(h); }
-            for (let h = 0; h <= 4; h++) { hoursList.push(h); } // Next day up to 4:00 AM
+            const rowHeight = 48;
+            const timelineHeight = 40 * rowHeight;
+            const formatTime = minutes => {
+                const hour = Math.floor((8 * 60 + minutes) / 60) % 24;
+                const minute = minutes % 60;
+                return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+            };
 
             let html = `
                 <table class="w-full border-collapse min-w-[900px] text-xs">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                             <th class="py-3 px-3 text-left font-bold text-slate-500 w-20 border-r border-slate-200">Time</th>
-                            ${weekDays.map(d => `
-                                <th class="py-3 px-3 text-center border-r border-slate-200 font-semibold text-slate-700">
-                                    <div>${d.dayName}</div>
-                                    <div class="text-[11px] text-slate-400 font-normal">${d.displayDate}</div>
-                                </th>
-                            `).join('')}
+                            ${weekDays.map(day => `<th class="py-3 px-3 text-center border-r border-slate-200 font-semibold text-slate-700"><div>${day.dayName}</div><div class="text-[11px] text-slate-400 font-normal">${day.displayDate}</div></th>`).join('')}
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
             `;
 
-            hoursList.forEach(h => {
-                ["00", "30"].forEach(m => {
-                    let timeStr = `${String(h).padStart(2, '0')}:${m}`;
-                    let displayH = h % 12 === 0 ? 12 : h % 12;
-                    let ampm = h >= 12 ? 'PM' : 'AM';
-                    let timeDisplay = `${displayH}:${m} ${ampm}`;
-
-                    html += `<tr class="h-12 hover:bg-slate-50/50 transition">`;
-                    html += `<td class="py-2 px-3 font-semibold text-slate-500 border-r border-slate-200 bg-slate-50/30 whitespace-nowrap">${timeDisplay}</td>`;
-
+            for (let slot = 0; slot < 40; slot++) {
+                const offset = slot * 30;
+                const hour = (8 + Math.floor(offset / 60)) % 24;
+                const minute = offset % 60;
+                const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                html += `<tr class="h-12 hover:bg-slate-50/50 transition"><td class="py-2 px-3 font-semibold text-slate-500 border-r border-slate-200 bg-slate-50/30 whitespace-nowrap">${formatTime(offset)}</td>`;
+                if (slot === 0) {
                     weekDays.forEach(day => {
-                        // Find class matching date and time
-                        let cls = appState.classes.find(c => c.date === day.dateStr && c.time === timeStr);
-                        if (cls) {
-                            let st = appState.students.find(s => s.id === cls.studentId);
-                            let bgCol = cls.attendance === 'Present' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : cls.attendance === 'Absent' ? 'bg-amber-50 border-amber-200 text-amber-800' : cls.attendance === 'Cancelled' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-indigo-50 border-indigo-200 text-indigo-800';
-                            
-                            // Calculate row span depending on duration (25m = 1 cell, 50m = 2 cells approx)
-                            let rowSpan = cls.duration >= 50 ? 2 : 1;
-
-                            html += `
-                                <td class="p-1 border-r border-slate-200 relative" ${rowSpan > 1 ? `rowspan="${rowSpan}"` : ''}>
-                                    <div onclick="openClassActionModal('${cls.id}')" class="w-full h-full p-2 rounded-xl border ${bgCol} shadow-xs cursor-pointer flex flex-col justify-between overflow-hidden transition hover:shadow-md">
-                                        <div class="flex items-center justify-between">
-                                            <span class="font-bold truncate">${st ? st.name : 'Student'}</span>
-                                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/60">${cls.duration}m</span>
-                                        </div>
-                                        <div class="text-[10px] opacity-80 truncate">${cls.type} • ${cls.attendance || 'Scheduled'}</div>
-                                    </div>
-                                </td>
-                            `;
-                        } else {
-                            html += `
-                                <td class="p-1 border-r border-slate-200 text-center">
-                                    <button onclick="openAddClassModal(null, '${day.dateStr}', '${timeStr}')" class="w-full h-full min-h-[36px] rounded-lg hover:bg-indigo-50/50 text-slate-300 hover:text-indigo-600 flex items-center justify-center transition group" title="Add Slot">
-                                        <i class="fa-solid fa-plus text-[10px] opacity-0 group-hover:opacity-100"></i>
-                                    </button>
-                                </td>
-                            `;
-                        }
+                        const timeSlots = Array.from({ length: 40 }, (_, index) => {
+                            const slotOffset = index * 30;
+                            const slotHour = (8 + Math.floor(slotOffset / 60)) % 24;
+                            const slotMinute = slotOffset % 60;
+                            const slotTime = `${String(slotHour).padStart(2, '0')}:${String(slotMinute).padStart(2, '0')}`;
+                            return `<button aria-label="Add class ${day.dayName} ${formatTime(slotOffset)}" onclick="openAddClassModal(null, '${day.dateStr}', '${slotTime}')" style="top:${index * rowHeight}px;height:${rowHeight}px" class="absolute inset-x-0 z-0 rounded-lg hover:bg-indigo-50/50 text-slate-300 hover:text-indigo-600 group"><i class="fa-solid fa-plus text-[10px] opacity-0 group-hover:opacity-100"></i></button>`;
+                        }).join('');
+                        const events = appState.classes.filter(cls => cls.date === day.dateStr).map(cls => {
+                            const student = appState.students.find(item => item.id === cls.studentId);
+                            const [classHour, classMinute] = cls.time.split(':').map(Number);
+                            const minuteOffset = ((classHour * 60 + classMinute - 8 * 60) + 1440) % 1440;
+                            const top = minuteOffset * rowHeight / 30;
+                            const height = cls.duration * rowHeight / 30;
+                            const tone = cls.attendance === 'Present' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : cls.attendance === 'Absent' ? 'bg-amber-50 border-amber-200 text-amber-800' : cls.attendance === 'Cancelled' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-indigo-50 border-indigo-200 text-indigo-800';
+                            return `<button title="${student?.name || 'Student'} · ${cls.time} · ${cls.duration} minutes · ${cls.type} · ${cls.attendance || 'Scheduled'}" onclick="openClassActionModal('${cls.id}')" style="top:${top}px;height:${height}px" class="absolute inset-x-1 z-10 overflow-hidden rounded-xl border p-2 text-left shadow-xs ${tone}"><span class="block truncate font-bold">${student?.name || 'Student'} · ${cls.duration}m</span><span class="block truncate text-[10px] opacity-80">${cls.type} · ${cls.attendance || 'Scheduled'}</span></button>`;
+                        }).join('');
+                        html += `<td rowspan="40" class="relative border-r border-slate-200 p-1 align-top"><div class="relative" style="height:${timelineHeight}px;background:repeating-linear-gradient(to bottom,#f1f5f9 0 1px,transparent 1px ${rowHeight}px)">${timeSlots}${events}</div></td>`;
                     });
-
-                    html += `</tr>`;
-                });
-            });
-
-            html += `</tbody></table>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
             gridWrapper.innerHTML = html;
         }
 
@@ -1903,7 +2216,7 @@
 
             let studentWeeks = {};
             appState.classes.forEach(c => {
-                if (c.attendance !== 'Present' && c.attendance !== 'Absent') return;
+                if (!isClassPayable(c)) return;
                 let mon = formatDateStr(getMonday(c.date));
                 if (mon !== selectedMonday) return;
 
@@ -1937,7 +2250,7 @@
 
                 let weeklyPHP = 0;
                 group.classes.forEach(c => {
-                    if (c.attendance === 'Present' || c.attendance === 'Absent') {
+                    if (isClassPayable(c)) {
                         weeklyPHP += computeClassPHP(c);
                     }
                     if (isClassPaid(c)) {
@@ -2011,11 +2324,15 @@
 
         function togglePaidStatus(key) {
             const payableClasses = appState.classes.filter(c =>
-                getClassPaymentKey(c) === key && (c.attendance === 'Present' || c.attendance === 'Absent')
+                getClassPaymentKey(c) === key && isClassPayable(c)
             );
             const allPaid = payableClasses.length > 0 && payableClasses.every(isClassPaid);
             if (allPaid) {
                 delete appState.paidWeeks[key];
+                payableClasses.forEach(cls => {
+                    cls.paidStatus = 'Pending';
+                    delete cls.paidAmountPHP;
+                });
             } else {
                 const existing = appState.paidWeeks[key];
                 const classAmounts = existing && typeof existing === 'object' && existing.classAmounts
@@ -2025,6 +2342,8 @@
                     if (!Object.prototype.hasOwnProperty.call(classAmounts, cls.id)) {
                         classAmounts[cls.id] = computeCurrentClassPHP(cls);
                     }
+                    cls.paidStatus = 'Paid';
+                    cls.paidAmountPHP = classAmounts[cls.id];
                 });
                 appState.paidWeeks[key] = { classAmounts };
             }
@@ -2057,6 +2376,22 @@
             const reportSelected = document.getElementById('report-month-select')?.value || 'all';
             document.getElementById('record-month-select').innerHTML = buildHtml(recordSelected);
             document.getElementById('report-month-select').innerHTML = buildHtml(reportSelected);
+
+            const reportWeek = document.getElementById('report-week-select');
+            const selectedWeek = reportWeek?.value || appState.currentSelectedWeekStart;
+            const weekStarts = new Set([appState.currentSelectedWeekStart]);
+            appState.classes.forEach(cls => weekStarts.add(formatDateStr(getMonday(cls.date))));
+            if (reportWeek) {
+                reportWeek.innerHTML = '<option value="all">All Weeks</option>' + Array.from(weekStarts).sort().reverse().map(week => `<option value="${week}">${getWeekLabel(week)}</option>`).join('');
+                reportWeek.value = weekStarts.has(selectedWeek) ? selectedWeek : appState.currentSelectedWeekStart;
+            }
+
+            const reportStudent = document.getElementById('report-student-select');
+            const selectedStudent = reportStudent?.value || 'all';
+            if (reportStudent) {
+                reportStudent.innerHTML = '<option value="all">All Students</option>' + appState.students.map(student => `<option value="${student.id}">${student.name}</option>`).join('');
+                reportStudent.value = appState.students.some(student => student.id === selectedStudent) ? selectedStudent : 'all';
+            }
         }
 
         function renderClassRecords() {
@@ -2097,63 +2432,59 @@
         }
 
         function renderReports() {
-            let selectedMonth = document.getElementById('report-month-select').value;
-            let selectedStatus = document.getElementById('report-status-select').value;
-            let monthClasses = appState.classes.filter(c => {
-                let monthMatch = selectedMonth === 'all' || c.date.startsWith(selectedMonth);
-                let statusMatch = selectedStatus === 'all' || c.attendance === selectedStatus;
-                return monthMatch && statusMatch;
-            });
-
-            let monthlyRevenue = 0;
-            let totalConducted = monthClasses.filter(c => c.attendance === 'Present').length;
-            let cancelledCount = monthClasses.filter(c => c.attendance === 'Cancelled').length;
-            let totalPresentOrAbsent = monthClasses.filter(c => c.attendance === 'Present' || c.attendance === 'Absent').length;
-
-            monthClasses.forEach(c => {
-                if (c.attendance === 'Present' || c.attendance === 'Absent') {
-                    monthlyRevenue += computeClassPHP(c);
-                }
-            });
-
-            let attendanceRate = totalPresentOrAbsent > 0 ? Math.round((totalConducted / totalPresentOrAbsent) * 100) : 0;
+            const selectedMonth = document.getElementById('report-month-select').value;
+            const selectedWeek = document.getElementById('report-week-select').value;
+            const selectedStudent = document.getElementById('report-student-select').value;
+            const selectedStatus = document.getElementById('report-status-select').value;
+            const matchingClasses = appState.classes.filter(cls =>
+                (selectedStudent === 'all' || cls.studentId === selectedStudent) &&
+                (selectedStatus === 'all' || cls.attendance === selectedStatus)
+            );
+            const monthClasses = matchingClasses.filter(cls => selectedMonth === 'all' || cls.date.startsWith(selectedMonth));
+            const weekClasses = matchingClasses.filter(cls => selectedWeek === 'all' || formatDateStr(getMonday(cls.date)) === selectedWeek);
+            const payableMonthClasses = monthClasses.filter(isClassPayable);
+            const payableWeekClasses = weekClasses.filter(isClassPayable);
+            const monthlyRevenue = payableMonthClasses.reduce((total, cls) => total + computeClassPHP(cls), 0);
+            const weeklyRevenue = payableWeekClasses.reduce((total, cls) => total + computeClassPHP(cls), 0);
+            const totalConducted = monthClasses.filter(isClassCompleted).length;
+            const cancelledCount = monthClasses.filter(cls => cls.attendance === 'Cancelled').length;
+            const totalAttendedOrAbsent = monthClasses.filter(cls => ['Present', 'Absent', 'Makeup'].includes(cls.attendance)).length;
+            const attendanceRate = totalAttendedOrAbsent > 0 ? Math.round((totalConducted / totalAttendedOrAbsent) * 100) : 0;
 
             document.getElementById('report-monthly-revenue').innerText = `₱${monthlyRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             document.getElementById('report-attendance-rate').innerText = `${attendanceRate}%`;
             document.getElementById('report-cancelled-count').innerText = cancelledCount;
             document.getElementById('report-total-conducted').innerText = totalConducted;
+            document.getElementById('report-week-completed').innerText = weekClasses.filter(isClassCompleted).length;
+            document.getElementById('report-week-absent').innerText = weekClasses.filter(cls => cls.attendance === 'Absent').length;
+            document.getElementById('report-week-cancelled').innerText = weekClasses.filter(cls => cls.attendance === 'Cancelled').length;
+            document.getElementById('report-week-payment').innerText = `₱${weeklyRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-            // Company breakdown
-            let companyRevenue = {};
-            monthClasses.forEach(c => {
-                if (c.attendance === 'Present' || c.attendance === 'Absent') {
-                    let st = appState.students.find(s => s.id === c.studentId);
-                    let comp = st ? st.company : 'Independent';
-                    companyRevenue[comp] = (companyRevenue[comp] || 0) + computeClassPHP(c);
-                }
-            });
-
-            let breakdownEl = document.getElementById('report-company-breakdown');
-            let comps = Object.keys(companyRevenue);
-            if (comps.length === 0) {
-                breakdownEl.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">No revenue data for this period.</div>`;
-            } else {
-                breakdownEl.innerHTML = comps.map(comp => {
-                    let rev = companyRevenue[comp];
-                    let pct = monthlyRevenue > 0 ? Math.round((rev / monthlyRevenue) * 100) : 0;
-                    return `
-                        <div class="space-y-1">
-                            <div class="flex items-center justify-between text-xs font-semibold">
-                                <span class="text-slate-800">${comp}</span>
-                                <span class="text-red-700">₱${rev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${pct}%)</span>
-                            </div>
-                            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                                <div class="bg-indigo-600 h-full rounded-full" style="width: ${pct}%"></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
+            const totalsByStudent = classes => {
+                const totals = new Map();
+                classes.forEach(cls => {
+                    if (!isClassPayable(cls)) return;
+                    const student = appState.students.find(item => item.id === cls.studentId);
+                    const key = cls.studentId;
+                    const entry = totals.get(key) || { name: student?.name || 'Former student', count: 0, amount: 0 };
+                    entry.count += 1;
+                    entry.amount += computeClassPHP(cls);
+                    totals.set(key, entry);
+                });
+                return Array.from(totals.values()).sort((a, b) => a.name.localeCompare(b.name));
+            };
+            const renderBreakdown = (elementId, classes, includeCount) => {
+                const element = document.getElementById(elementId);
+                const totals = totalsByStudent(classes);
+                element.innerHTML = totals.length ? totals.map(entry => `
+                    <div class="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-xs">
+                        <span class="font-semibold text-slate-800">${entry.name}${includeCount ? ` · ${entry.count} classes` : ''}</span>
+                        <span class="font-bold text-red-700">₱${entry.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                `).join('') : '<div class="py-5 text-center text-xs text-slate-400">No payable classes for this period.</div>';
+            };
+            renderBreakdown('report-week-by-student', payableWeekClasses, false);
+            renderBreakdown('report-company-breakdown', payableMonthClasses, true);
         }
 
         function populateExchangeRateManager() {
